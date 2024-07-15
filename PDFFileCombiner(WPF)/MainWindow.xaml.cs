@@ -2,8 +2,6 @@
 using System.IO;
 using System.Linq;
 using System.Windows;
-using System.Windows.Controls;
-using Microsoft.Win32;
 using iTextSharp.text;
 using iTextSharp.text.pdf;
 using Ookii.Dialogs.Wpf;
@@ -13,15 +11,15 @@ namespace PDFFileCombiner_WPF_
 {
     public partial class MainWindow : Window
     {
-        private ObservableCollection<string> selectedFileNames; // Обновленный список для хранения имен файлов
-        private ObservableCollection<string> selectedFilePaths; // Список для хранения полных путей к файлам
+        private ObservableCollection<string> selectedFileNames;
+        private ObservableCollection<string> selectedFilePaths;
 
         public MainWindow()
         {
             InitializeComponent();
             selectedFileNames = new ObservableCollection<string>();
             selectedFilePaths = new ObservableCollection<string>();
-            FileListBox.ItemsSource = selectedFileNames; // Привязываем список к ListBox
+            FileListBox.ItemsSource = selectedFileNames;
         }
 
         private void FileListBox_DragEnter(object sender, DragEventArgs e)
@@ -47,8 +45,8 @@ namespace PDFFileCombiner_WPF_
                     if (Path.GetExtension(file).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
                     {
                         string fileName = Path.GetFileName(file);
-                        selectedFileNames.Add(fileName); // Добавляем только имя файла в ListBox
-                        selectedFilePaths.Add(file); // Добавляем полный путь к файлу в коллекцию
+                        selectedFileNames.Add(fileName);
+                        selectedFilePaths.Add(file);
                     }
                     else
                     {
