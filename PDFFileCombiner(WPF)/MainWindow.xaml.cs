@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows;
-using iTextSharp.text;
-using iTextSharp.text.pdf;
 using Ookii.Dialogs.Wpf;
 using System.Collections.ObjectModel;
+using System.Windows.Controls;
 
 namespace PDFFileCombiner_WPF_
 {
@@ -13,6 +13,8 @@ namespace PDFFileCombiner_WPF_
     {
         private ObservableCollection<string> selectedFileNames;
         private ObservableCollection<string> selectedFilePaths;
+        private readonly PdfMergeService mergeService = new();
+        private readonly GhostscriptCompressor compressor = new();
 
         public MainWindow()
         {
@@ -31,6 +33,28 @@ namespace PDFFileCombiner_WPF_
             else
             {
                 e.Effects = DragDropEffects.None;
+            }
+        }
+
+        private bool TryMergeAndCompress(IEnumerable<string> inputPaths, string outputPath)
+        {
+            string pdfSettings = (string)((ComboBoxItem)CompressionComboBox.SelectedItem).Tag;
+            string tempPath = Path.Combine(Path.GetTempPath(), Guid.NewGuid() + ".pdf");
+            try
+            {
+                mergeService.Merge(inputPaths, tempPath);
+                compressor.Compress(tempPath, outputPath, pdfSettings);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            finally
+            {
+                if (File.Exists(tempPath))
+                    File.Delete(tempPath);
             }
         }
 
@@ -77,7 +101,7 @@ namespace PDFFileCombiner_WPF_
         private void MoveDown_Click(object sender, RoutedEventArgs e)
         {
             int selectedIndex = FileListBox.SelectedIndex;
-            if (selectedIndex < selectedFileNames.Count - 1)
+            if (selectedIndex >= 0 && selectedIndex < selectedFileNames.Count - 1)
             {
                 string selectedFileName = selectedFileNames[selectedIndex];
                 string selectedFilePath = selectedFilePaths[selectedIndex];
@@ -91,6 +115,19 @@ namespace PDFFileCombiner_WPF_
                 FileListBox.SelectedIndex = selectedIndex + 1;
             }
         }
+        
+        private void Remove_Click(object sender, RoutedEventArgs e)
+        {
+            int selectedIndex = FileListBox.SelectedIndex;
+            if (selectedIndex < 0)
+                return;
+
+            selectedFileNames.RemoveAt(selectedIndex);
+            selectedFilePaths.RemoveAt(selectedIndex);
+
+            if (selectedFileNames.Count > 0)
+                FileListBox.SelectedIndex = Math.Min(selectedIndex, selectedFileNames.Count - 1);
+        }
 
         private void Combine_PDFs(object sender, RoutedEventArgs e)
         {
@@ -101,12 +138,12 @@ namespace PDFFileCombiner_WPF_
             }
 
             string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
-            string outputFilePath = !string.IsNullOrEmpty(FileName.Text) ?
-                Path.Combine(desktopPath, FileName.Text + ".pdf") :
-                Path.Combine(desktopPath, "default.pdf");
+            string outputFilePath = !string.IsNullOrEmpty(FileName.Text)
+                ? Path.Combine(desktopPath, FileName.Text + ".pdf")
+                : Path.Combine(desktopPath, "default.pdf");
 
-            MergeAndCompressPDFs(outputFilePath, selectedFilePaths.ToArray());
-            MessageBox.Show("PDF file(s) merged and compressed successfully.");
+            if (TryMergeAndCompress(selectedFilePaths, outputFilePath))
+                MessageBox.Show("PDF file(s) merged and compressed successfully.");
         }
 
         private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
@@ -126,89 +163,24 @@ namespace PDFFileCombiner_WPF_
                 {
                     outputFilePath = Path.Combine(desktopPath, "default.pdf");
                 }
+
                 MergePDFsFromFolder(selectedFolderPath, outputFilePath);
             }
         }
 
         private void MergePDFsFromFolder(string folderPath, string outputFilePath)
         {
-            string[] pdfFiles = Directory.GetFiles(folderPath, "*.pdf");
+            string[] pdfFiles = Directory.GetFiles(folderPath, "*.pdf")
+                .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
             if (pdfFiles.Length == 0)
             {
                 MessageBox.Show("No PDF files found in the selected folder.");
                 return;
             }
 
-            using (FileStream fs = new FileStream(outputFilePath, FileMode.Create))
-            {
-                Document document = new Document();
-                PdfCopy copy = new PdfCopy(document, fs);
-
-                document.Open();
-
-                foreach (string pdfFile in pdfFiles)
-                {
-                    PdfReader reader = new PdfReader(pdfFile);
-                    for (int i = 1; i <= reader.NumberOfPages; i++)
-                    {
-                        PdfImportedPage page = copy.GetImportedPage(reader, i);
-                        copy.AddPage(page);
-                    }
-                    reader.Close();
-                }
-
-                document.Close();
-            }
-
-            MessageBox.Show("PDF files merged successfully.");
-        }
-
-        private static void MergeAndCompressPDFs(string outputFilePath, params string[] pdfFiles)
-        {
-            using (FileStream fs = new FileStream(outputFilePath, FileMode.Create))
-            {
-                Document document = new Document();
-                PdfCopy copy = new PdfCopy(document, fs);
-
-                document.Open();
-
-                foreach (string pdfFile in pdfFiles)
-                {
-                    if (!string.IsNullOrEmpty(pdfFile))
-                    {
-                        string compressedPdfFile = Path.Combine(Path.GetTempPath(), "compressed.pdf");
-                        CompressPDF(pdfFile, compressedPdfFile);
-
-                        PdfReader reader = new PdfReader(compressedPdfFile);
-                        copy.AddDocument(reader);
-                        reader.Close();
-                    }
-                }
-
-                document.Close();
-            }
-        }
-
-        private static void CompressPDF(string inputPath, string outputPath)
-        {
-            using (FileStream inputStream = new FileStream(inputPath, FileMode.Open))
-            using (FileStream outputStream = new FileStream(outputPath, FileMode.Create))
-            {
-                PdfReader reader = new PdfReader(inputStream);
-                PdfStamper stamper = new PdfStamper(reader, outputStream);
-
-                PdfDictionary pageDict;
-                for (int pageIndex = 1; pageIndex <= reader.NumberOfPages; pageIndex++)
-                {
-                    pageDict = reader.GetPageN(pageIndex);
-                    pageDict.Remove(PdfName.ROTATE);
-                }
-
-                stamper.SetFullCompression();
-
-                stamper.Close();
-                reader.Close();
-            }
+            if (TryMergeAndCompress(pdfFiles, outputFilePath))
+                MessageBox.Show("PDF files merged and compressed successfully.");
         }
     }
 }

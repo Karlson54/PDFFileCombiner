@@ -5,15 +5,24 @@
         Title="PDF File Combiner" Height="500" Width="600">
     <GroupBox>
         <StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="25,10,0,10">
+                <Label Content="Сжатие:" VerticalAlignment="Center" />
+                <ComboBox x:Name="CompressionComboBox" Width="250" SelectedIndex="1">
+                    <ComboBoxItem Content="Максимальное (72 dpi)" Tag="/screen" />
+                    <ComboBoxItem Content="Баланс (150 dpi)" Tag="/ebook" />
+                    <ComboBoxItem Content="Высокое качество (300 dpi)" Tag="/printer" />
+                </ComboBox>
+            </StackPanel>
             <TabControl Name="myTabControl"
-                        TabStripPlacement="Top" 
+                        TabStripPlacement="Top"
                         Margin="0, 0, 0, 10" Height="450" Width="550">
                 <TabItem>
                     <TabItem.Header>Each file separately</TabItem.Header>
                     <StackPanel>
                         <StackPanel Orientation="Horizontal" Margin="10">
-                            <Button Content="↑" Width="30" Click="MoveUp_Click"/>
-                            <Button Content="↓" Width="30" Click="MoveDown_Click"/>
+                            <Button Content="↑" Width="30" Click="MoveUp_Click" />
+                            <Button Content="↓" Width="30" Click="MoveDown_Click" />
+                            <Button Content="✕" Width="30" Margin="10,0,0,0" Click="Remove_Click" ToolTip="Удалить выбранный файл"/>
                         </StackPanel>
                         <ListBox x:Name="FileListBox" Margin="10" Height="200"
                                  AllowDrop="True" DragEnter="FileListBox_DragEnter" Drop="FileListBox_Drop">
@@ -24,7 +33,8 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                         <Label HorizontalAlignment="Left" Margin="10">Enter the name of the new file</Label>
-                        <TextBox x:Name="FileName" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10" Width="300"/>
+                        <TextBox x:Name="FileName" VerticalAlignment="Bottom" HorizontalAlignment="Left" Margin="10"
+                                 Width="300" />
                         <Button Content="Combine PDFs" HorizontalAlignment="Left" Margin="10"
                                 Width="480" Click="Combine_PDFs" />
                     </StackPanel>
@@ -33,9 +43,11 @@
                     <TabItem.Header>All in folder</TabItem.Header>
                     <Grid>
                         <Button Content="Open Folder" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10"
-                                Width="120" Click="OpenFolderButton_Click"/>
+                                Width="120" Click="OpenFolderButton_Click" />
                         <Label HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,40">Enter the name of the new file</Label>
-                        <TextBox x:Name="FileNameForFolder" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,70" Width="300"></TextBox>
+                        <TextBox x:Name="FileNameForFolder" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                 Margin="10,70" Width="300">
+                        </TextBox>
                     </Grid>
                 </TabItem>
             </TabControl>
